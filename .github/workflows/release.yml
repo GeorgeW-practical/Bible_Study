@@ -1,0 +1,35 @@
+name: Publish release
+
+# Runs when a new edition is placed in the latest/ folder.
+# It creates (or refreshes) the GitHub Release for that version so downloads are counted.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "latest/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create or refresh the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VER="$(tr -d '[:space:]' < latest/version.txt)"
+          TAG="V${VER}"
+          FILE="latest/Bible_Study_Verse_by_Verse.html"
+          TITLE="Bible Study Verse by Verse - Version ${VER}"
+          test -s "$FILE"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$FILE" --clobber
+            gh release edit "$TAG" --title "$TITLE" --latest
+          else
+            gh release create "$TAG" "$FILE" --title "$TITLE" --notes "Offline commentary, single HTML file. Version ${VER}." --latest
+          fi
